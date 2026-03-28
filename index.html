@@ -20,6 +20,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            z-index: 0;
         }
 
         #bg-video {
@@ -29,28 +30,109 @@
             height: 100%;
             object-fit: cover;
             display: none;
+            z-index: 0;
         }
 
-        h1 {
+        /* Wrapper sits above the background */
+        #text-wrap {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
+            z-index: 1;
+            line-height: 1;
+        }
+
+        /* Iridescent outline layer — sits behind the glass text */
+        #text-wrap::before {
+            content: 'GLAS';
+            position: absolute;
+            inset: 0;
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             font-size: clamp(8rem, 20vw, 18rem);
             font-weight: 700;
             letter-spacing: -0.02em;
-            color: rgba(255, 255, 255, 0.16);
+            line-height: 1;
+            white-space: nowrap;
+            -webkit-text-fill-color: transparent;
+            -webkit-text-stroke: 2px rgba(160, 220, 255, 0.18);
+            filter: blur(0.5px);
+            pointer-events: none;
+        }
+
+        h1 {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: clamp(8rem, 20vw, 18rem);
+            font-weight: 700;
+            letter-spacing: -0.02em;
             line-height: 1;
             white-space: nowrap;
             user-select: none;
+
+            /* Glass: clip the background image to the text shape */
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            -webkit-text-stroke: 1px rgba(200, 235, 255, 0.12);
+
+            /* Background image + size set by JS to align with viewport */
+            background-repeat: no-repeat;
+
+            /* Liquid distortion filter */
+            filter: url(#liquid-glass);
+        }
+
+        /* Fallback when manifest is empty */
+        h1.plain {
+            -webkit-background-clip: unset;
+            background-clip: unset;
+            -webkit-text-fill-color: rgba(255, 255, 255, 0.16);
+            background-image: none !important;
+            filter: none;
         }
     </style>
 </head>
 <body>
+
+    <!-- SVG liquid-glass filter -->
+    <svg width="0" height="0" style="position:absolute;pointer-events:none" aria-hidden="true">
+        <defs>
+            <filter id="liquid-glass" x="-15%" y="-30%" width="130%" height="160%">
+                <!-- Generate organic liquid noise -->
+                <feTurbulence
+                    type="fractalNoise"
+                    baseFrequency="0.016 0.020"
+                    numOctaves="3"
+                    seed="9"
+                    result="noise" />
+                <!-- Displace the source graphic using the noise -->
+                <feDisplacementMap
+                    in="SourceGraphic"
+                    in2="noise"
+                    scale="30"
+                    xChannelSelector="R"
+                    yChannelSelector="G"
+                    result="displaced" />
+                <!-- Soft glass blur -->
+                <feGaussianBlur
+                    in="displaced"
+                    stdDeviation="1.4"
+                    result="blurred" />
+                <!-- Clip distortion back to original letter shapes -->
+                <feComposite
+                    in="blurred"
+                    in2="SourceGraphic"
+                    operator="in" />
+            </filter>
+        </defs>
+    </svg>
+
     <img id="bg" alt="" />
     <video id="bg-video" autoplay muted loop playsinline></video>
-    <h1>GLAS</h1>
+
+    <div id="text-wrap">
+        <h1 id="glas" class="plain">GLAS</h1>
+    </div>
 
     <script>
         async function init() {
@@ -58,9 +140,7 @@
             try {
                 const res = await fetch('/manifest.json');
                 manifest = await res.json();
-            } catch (e) {
-                return;
-            }
+            } catch (e) { return; }
 
             if (!manifest.length) return;
 
@@ -70,9 +150,34 @@
                 const vid = document.getElementById('bg-video');
                 vid.src = item.url;
                 vid.style.display = 'block';
+                // Video: use translucent overlay (background-clip can't sample video)
+                // Keep plain style but add a frosted tint
+                const h1 = document.getElementById('glas');
+                h1.classList.add('plain');
             } else {
                 document.getElementById('bg').src = item.url;
+                applyGlassText(item.url);
             }
+        }
+
+        function applyGlassText(url) {
+            const h1 = document.getElementById('glas');
+            h1.classList.remove('plain');
+
+            // Align the clipped background with the full-page background:
+            // We set the background to viewport size and offset by the element's position.
+            function setPos() {
+                const rect = h1.getBoundingClientRect();
+                h1.style.backgroundImage = `url('${CSS.escape ? url : url}')`;
+                h1.style.backgroundSize  = `${window.innerWidth}px ${window.innerHeight}px`;
+                h1.style.backgroundPosition = `-${rect.left}px -${rect.top}px`;
+            }
+
+            // Wait for fonts and layout to settle
+            document.fonts.ready.then(() => {
+                setPos();
+                window.addEventListener('resize', setPos);
+            });
         }
 
         init();
