@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GLAS / upload</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #0d0d0d;
+            color: #e0e0e0;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            padding: 3rem 2rem;
+        }
+
+        header {
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .logo { font-size: 1.1rem; font-weight: 700; }
+        .slash { color: #fff; font-weight: 900; }
+        .sub { color: #555; font-weight: 400; }
+
+        #auth {
+            max-width: 320px;
+            margin: 10vh auto;
+            text-align: center;
+        }
+
+        #auth input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            color: #e0e0e0;
+            font-size: 1rem;
+            border-radius: 4px;
+            margin-bottom: 0.75rem;
+            outline: none;
+        }
+
+        #auth input:focus { border-color: #555; }
+
+        button {
+            padding: 0.75rem 2rem;
+            background: #fff;
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        button:hover { background: #e0e0e0; }
+
+        #app { display: none; }
+
+        #upload-btn {
+            margin-bottom: 3rem;
+            background: #fff;
+            color: #000;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1rem;
+        }
+
+        .gallery-item {
+            position: relative;
+            aspect-ratio: 16/9;
+            background: #1a1a1a;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .gallery-item img,
+        .gallery-item video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .gallery-item .badge {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: rgba(0,0,0,0.6);
+            color: #fff;
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .empty {
+            color: #444;
+            font-size: 0.9rem;
+        }
+
+        #status {
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            color: #888;
+            min-height: 1.2em;
+        }
+
+        .error-msg { color: #ff4444; }
+        .success-msg { color: #44cc88; }
+    </style>
+</head>
+<body>
+
+<header>
+    <span class="logo">GLAS<span class="slash">/</span><span class="sub">upload</span></span>
+</header>
+
+<div id="auth">
+    <input type="password" id="pw" placeholder="password" />
+    <br>
+    <button onclick="unlock()">Enter</button>
+</div>
+
+<div id="app">
+    <button id="upload-btn" onclick="openWidget()">+ Upload image or video</button>
+    <div id="status"></div>
+    <div class="gallery" id="gallery"></div>
+</div>
+
+<script src="https://upload-widget.cloudinary.com/global/all.js"></script>
+<script>
+    const CLOUD_NAME   = 'dpr7dmhgo';
+    const UPLOAD_PRESET = 'glas_upload';
+    const PASSWORD      = 'glas2025';
+
+    function unlock() {
+        const pw = document.getElementById('pw').value;
+        if (pw === PASSWORD) {
+            document.getElementById('auth').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            loadGallery();
+        } else {
+            document.getElementById('pw').style.borderColor = '#ff4444';
+        }
+    }
+
+    document.getElementById('pw').addEventListener('keydown', e => {
+        if (e.key === 'Enter') unlock();
+    });
+
+    async function loadGallery() {
+        const gallery = document.getElementById('gallery');
+        gallery.innerHTML = '';
+        try {
+            const res = await fetch('/manifest.json');
+            const manifest = await res.json();
+            if (!manifest.length) {
+                gallery.innerHTML = '<p class="empty">No media yet — upload something.</p>';
+                return;
+            }
+            manifest.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'gallery-item';
+                if (item.type === 'video') {
+                    el.innerHTML = `<video src="${item.url}" muted loop autoplay playsinline></video><span class="badge">video</span>`;
+                } else {
+                    el.innerHTML = `<img src="${item.url}" alt="" /><span class="badge">image</span>`;
+                }
+                gallery.appendChild(el);
+            });
+        } catch(e) {
+            gallery.innerHTML = '<p class="empty">Could not load gallery.</p>';
+        }
+    }
+
+    let widget;
+    function openWidget() {
+        if (!widget) {
+            widget = cloudinary.createUploadWidget({
+                cloudName: CLOUD_NAME,
+                uploadPreset: UPLOAD_PRESET,
+                sources: ['local', 'camera'],
+                resourceType: 'auto',
+                multiple: true,
+                clientAllowedFormats: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov', 'webm'],
+            }, async (error, result) => {
+                if (error) {
+                    setStatus('Upload error: ' + error.message, 'error');
+                    return;
+                }
+                if (result.event === 'success') {
+                    const info = result.info;
+                    const url  = info.secure_url;
+                    const type = info.resource_type === 'video' ? 'video' : 'image';
+                    setStatus('Saving to manifest…');
+                    await addToManifest(url, type);
+                }
+            });
+        }
+        widget.open();
+    }
+
+    async function addToManifest(url, type) {
+        try {
+            const res = await fetch('/.netlify/functions/update-manifest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url, type }),
+            });
+            if (res.ok) {
+                setStatus('Saved! Reloading gallery…', 'success');
+                setTimeout(loadGallery, 1500);
+            } else {
+                const err = await res.text();
+                setStatus('Error saving: ' + err, 'error');
+            }
+        } catch(e) {
+            setStatus('Error: ' + e.message, 'error');
+        }
+    }
+
+    function setStatus(msg, cls) {
+        const el = document.getElementById('status');
+        el.textContent = msg;
+        el.className = cls === 'error' ? 'error-msg' : cls === 'success' ? 'success-msg' : '';
+    }
+</script>
+</body>
+</html>

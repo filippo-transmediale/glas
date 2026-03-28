@@ -5,31 +5,77 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GLAS</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
+            width: 100vw;
             height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #ffffff;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #bg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        #bg-video {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
         }
 
         h1 {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            font-size: clamp(6rem, 20vw, 18rem);
+            font-size: clamp(8rem, 20vw, 18rem);
             font-weight: 700;
             letter-spacing: -0.02em;
-            color: #000000;
+            color: rgba(255, 255, 255, 0.16);
             line-height: 1;
+            white-space: nowrap;
+            user-select: none;
         }
     </style>
 </head>
 <body>
+    <img id="bg" alt="" />
+    <video id="bg-video" autoplay muted loop playsinline></video>
     <h1>GLAS</h1>
+
+    <script>
+        async function init() {
+            let manifest = [];
+            try {
+                const res = await fetch('/manifest.json');
+                manifest = await res.json();
+            } catch (e) {
+                return;
+            }
+
+            if (!manifest.length) return;
+
+            const item = manifest[Math.floor(Math.random() * manifest.length)];
+
+            if (item.type === 'video') {
+                const vid = document.getElementById('bg-video');
+                vid.src = item.url;
+                vid.style.display = 'block';
+            } else {
+                document.getElementById('bg').src = item.url;
+            }
+        }
+
+        init();
+    </script>
 </body>
 </html>
