@@ -101,6 +101,24 @@
             letter-spacing: 0.05em;
         }
 
+        .gallery-item .delete-btn {
+            position: absolute;
+            bottom: 6px;
+            right: 6px;
+            background: rgba(180,0,0,0.75);
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        .gallery-item:hover .delete-btn { opacity: 1; }
+
         .empty {
             color: #444;
             font-size: 0.9rem;
@@ -169,11 +187,10 @@
             manifest.forEach(item => {
                 const el = document.createElement('div');
                 el.className = 'gallery-item';
-                if (item.type === 'video') {
-                    el.innerHTML = `<video src="${item.url}" muted loop autoplay playsinline></video><span class="badge">video</span>`;
-                } else {
-                    el.innerHTML = `<img src="${item.url}" alt="" /><span class="badge">image</span>`;
-                }
+                const media = item.type === 'video'
+                    ? `<video src="${item.url}" muted loop autoplay playsinline></video>`
+                    : `<img src="${item.url}" alt="" />`;
+                el.innerHTML = `${media}<span class="badge">${item.type}</span><button class="delete-btn" onclick="deleteItem('${item.url}', this)">Remove</button>`;
                 gallery.appendChild(el);
             });
         } catch(e) {
@@ -224,6 +241,31 @@
             }
         } catch(e) {
             setStatus('Error: ' + e.message, 'error');
+        }
+    }
+
+    async function deleteItem(url, btn) {
+        if (!confirm('Remove this from the site?')) return;
+        btn.textContent = '…';
+        btn.disabled = true;
+        try {
+            const res = await fetch('/.netlify/functions/delete-media', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url }),
+            });
+            if (res.ok) {
+                btn.closest('.gallery-item').remove();
+                setStatus('Removed.', 'success');
+            } else {
+                setStatus('Error removing: ' + await res.text(), 'error');
+                btn.textContent = 'Remove';
+                btn.disabled = false;
+            }
+        } catch(e) {
+            setStatus('Error: ' + e.message, 'error');
+            btn.textContent = 'Remove';
+            btn.disabled = false;
         }
     }
 
