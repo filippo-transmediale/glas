@@ -150,14 +150,22 @@
                 const vid = document.getElementById('bg-video');
                 vid.src = item.url;
                 vid.style.display = 'block';
-                // Video: use translucent overlay (background-clip can't sample video)
-                // Keep plain style but add a frosted tint
                 const h1 = document.getElementById('glas');
                 h1.classList.add('plain');
             } else {
-                document.getElementById('bg').src = item.url;
-                applyGlassText(item.url);
+                const smartUrl = cloudinarySmartCrop(item.url);
+                document.getElementById('bg').src = smartUrl;
+                applyGlassText(smartUrl);
             }
+        }
+
+        function cloudinarySmartCrop(url) {
+            // Only transform Cloudinary URLs
+            if (!url.includes('res.cloudinary.com')) return url;
+            const w = window.innerWidth  * window.devicePixelRatio | 0;
+            const h = window.innerHeight * window.devicePixelRatio | 0;
+            // Inject c_fill,g_auto,w_,h_ after /upload/
+            return url.replace('/upload/', `/upload/c_fill,g_auto,w_${w},h_${h}/`);
         }
 
         function applyGlassText(url) {
