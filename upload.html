@@ -227,7 +227,7 @@
 
     async function addToManifest(url, type) {
         try {
-            const res = await fetch('/.netlify/functions/update-manifest', {
+            const res = await fetch('/functions/update-manifest', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ url, type }),
@@ -249,7 +249,7 @@
         btn.textContent = '…';
         btn.disabled = true;
         try {
-            const res = await fetch('/.netlify/functions/delete-media', {
+            const res = await fetch('/functions/delete-media', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ url }),

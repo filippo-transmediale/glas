@@ -1,21 +1,17 @@
-exports.handler = async function (event) {
-    if (event.httpMethod !== 'POST') {
-        return { statusCode: 405, body: 'Method not allowed' };
-    }
-
+export async function onRequestPost(context) {
     let url, type;
     try {
-        ({ url, type } = JSON.parse(event.body));
+        ({ url, type } = await context.request.json());
         if (!url || !type) throw new Error('Missing url or type');
     } catch (e) {
-        return { statusCode: 400, body: 'Bad request: ' + e.message };
+        return new Response('Bad request: ' + e.message, { status: 400 });
     }
 
-    const token = process.env.GITHUB_TOKEN;
-    const repo  = process.env.GITHUB_REPO; // e.g. "filippo-transmediale/glas"
+    const token = context.env.GITHUB_TOKEN;
+    const repo  = context.env.GITHUB_REPO;
 
     if (!token || !repo) {
-        return { statusCode: 500, body: 'Missing GITHUB_TOKEN or GITHUB_REPO env vars' };
+        return new Response('Missing GITHUB_TOKEN or GITHUB_REPO env vars', { status: 500 });
     }
 
     const apiBase = `https://api.github.com/repos/${repo}/contents/manifest.json`;
@@ -34,24 +30,25 @@ exports.handler = async function (event) {
             sha = null;
             manifest = [];
         } else if (!res.ok) {
-            const err = await res.text();
-            return { statusCode: 500, body: 'GitHub fetch error: ' + err };
+            return new Response('GitHub fetch error: ' + await res.text(), { status: 500 });
         } else {
             const data = await res.json();
             sha = data.sha;
-            manifest = JSON.parse(Buffer.from(data.content, 'base64').toString('utf8'));
+            manifest = JSON.parse(atob(data.content.replace(/\n/g, '')));
         }
     } catch (e) {
-        return { statusCode: 500, body: 'Error reading manifest: ' + e.message };
+        return new Response('Error reading manifest: ' + e.message, { status: 500 });
     }
 
     // Append new entry
     manifest.push({ url, type });
 
-    // Commit updated manifest
+    const jsonStr = JSON.stringify(manifest, null, 2) + '\n';
+    const encoded = btoa(unescape(encodeURIComponent(jsonStr)));
+
     const body = {
         message: `Add ${type}: ${url.split('/').pop()}`,
-        content: Buffer.from(JSON.stringify(manifest, null, 2) + '\n').toString('base64'),
+        content: encoded,
     };
     if (sha) body.sha = sha;
 
@@ -62,16 +59,13 @@ exports.handler = async function (event) {
             body: JSON.stringify(body),
         });
         if (!res.ok) {
-            const err = await res.text();
-            return { statusCode: 500, body: 'GitHub commit error: ' + err };
+            return new Response('GitHub commit error: ' + await res.text(), { status: 500 });
         }
     } catch (e) {
-        return { statusCode: 500, body: 'Error committing manifest: ' + e.message };
+        return new Response('Error committing manifest: ' + e.message, { status: 500 });
     }
 
-    return {
-        statusCode: 200,
+    return new Response(JSON.stringify({ ok: true, url, type }), {
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ok: true, url, type }),
-    };
-};
+    });
+}

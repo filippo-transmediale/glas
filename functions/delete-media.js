@@ -1,29 +1,22 @@
-const crypto = require('crypto');
-
-exports.handler = async function (event) {
-    if (event.httpMethod !== 'POST') {
-        return { statusCode: 405, body: 'Method not allowed' };
-    }
-
+export async function onRequestPost(context) {
     let url;
     try {
-        ({ url } = JSON.parse(event.body));
+        ({ url } = await context.request.json());
         if (!url) throw new Error('Missing url');
     } catch (e) {
-        return { statusCode: 400, body: 'Bad request: ' + e.message };
+        return new Response('Bad request: ' + e.message, { status: 400 });
     }
 
-    const token     = process.env.GITHUB_TOKEN;
-    const repo      = process.env.GITHUB_REPO;
-    const apiKey    = process.env.CLOUDINARY_API_KEY;
-    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+    const token     = context.env.GITHUB_TOKEN;
+    const repo      = context.env.GITHUB_REPO;
+    const apiKey    = context.env.CLOUDINARY_API_KEY;
+    const apiSecret = context.env.CLOUDINARY_API_SECRET;
     const cloudName = 'dpr7dmhgo';
 
     if (!token || !repo) {
-        return { statusCode: 500, body: 'Missing GitHub env vars' };
+        return new Response('Missing GitHub env vars', { status: 500 });
     }
 
-    // 1. Remove from manifest.json via GitHub API
     const apiBase = `https://api.github.com/repos/${repo}/contents/manifest.json`;
     const headers = {
         'Authorization': `Bearer ${token}`,
@@ -32,18 +25,21 @@ exports.handler = async function (event) {
         'Content-Type': 'application/json',
     };
 
+    // Fetch current manifest
     let sha, manifest;
     try {
         const res = await fetch(apiBase, { headers });
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
         sha = data.sha;
-        manifest = JSON.parse(Buffer.from(data.content, 'base64').toString('utf8'));
+        manifest = JSON.parse(atob(data.content.replace(/\n/g, '')));
     } catch (e) {
-        return { statusCode: 500, body: 'Error reading manifest: ' + e.message };
+        return new Response('Error reading manifest: ' + e.message, { status: 500 });
     }
 
     const updated = manifest.filter(item => item.url !== url);
+    const jsonStr  = JSON.stringify(updated, null, 2) + '\n';
+    const encoded  = btoa(unescape(encodeURIComponent(jsonStr)));
 
     try {
         const res = await fetch(apiBase, {
@@ -51,49 +47,48 @@ exports.handler = async function (event) {
             headers,
             body: JSON.stringify({
                 message: `Remove media: ${url.split('/').pop()}`,
-                content: Buffer.from(JSON.stringify(updated, null, 2) + '\n').toString('base64'),
+                content: encoded,
                 sha,
             }),
         });
         if (!res.ok) throw new Error(await res.text());
     } catch (e) {
-        return { statusCode: 500, body: 'Error updating manifest: ' + e.message };
+        return new Response('Error updating manifest: ' + e.message, { status: 500 });
     }
 
-    // 2. Delete from Cloudinary (if credentials are available)
+    // Delete from Cloudinary using Web Crypto API
     if (apiKey && apiSecret) {
         try {
-            // Extract public_id from Cloudinary URL
-            // URL format: https://res.cloudinary.com/{cloud}/{type}/upload/v{ver}/{public_id}.{ext}
             const match = url.match(/\/(?:image|video)\/upload\/(?:v\d+\/)?(.+)\.[^.]+$/);
             if (match) {
                 const publicId  = match[1];
                 const resType   = url.includes('/video/') ? 'video' : 'image';
                 const timestamp = Math.floor(Date.now() / 1000);
                 const sigStr    = `public_id=${publicId}&timestamp=${timestamp}${apiSecret}`;
-                const signature = crypto.createHash('sha256').update(sigStr).digest('hex');
 
-                const form = new URLSearchParams({
-                    public_id: publicId,
-                    timestamp: timestamp.toString(),
-                    api_key: apiKey,
-                    signature,
-                });
+                // SHA-256 via Web Crypto API
+                const encoder   = new TextEncoder();
+                const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(sigStr));
+                const signature  = Array.from(new Uint8Array(hashBuffer))
+                    .map(b => b.toString(16).padStart(2, '0')).join('');
 
                 await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/${resType}/destroy`, {
                     method: 'POST',
-                    body: form,
+                    body: new URLSearchParams({
+                        public_id: publicId,
+                        timestamp: timestamp.toString(),
+                        api_key: apiKey,
+                        signature,
+                    }),
                 });
             }
         } catch (e) {
-            // Non-fatal: manifest is already updated
+            // Non-fatal
             console.error('Cloudinary delete error:', e.message);
         }
     }
 
-    return {
-        statusCode: 200,
+    return new Response(JSON.stringify({ ok: true }), {
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ok: true }),
-    };
-};
+    });
+}
