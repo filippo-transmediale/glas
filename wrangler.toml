@@ -5,3 +5,10 @@ compatibility_flags = ["nodejs_compat"]
 
 [assets]
 directory = "."
+
+[vars]
+GITHUB_REPO = "filippo-transmediale/glas"
+
+[[routes]]
+pattern = "glas.works"
+custom_domain = true
