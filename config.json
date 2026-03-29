@@ -1,6 +1,6 @@
 {
   "strength": 30,
-  "softness": 1.4,
+  "softness": 10,
   "extraBlur": 0,
   "tinting": 0.16,
   "contrast": 100,
