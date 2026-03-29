@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GLAS / furnace</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #0d0d0d;
+            color: #e0e0e0;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            padding: 3rem 2rem;
+        }
+
+        header {
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .logo { font-size: 1.1rem; font-weight: 700; }
+        .slash { color: #fff; font-weight: 900; }
+        .sub { color: #555; font-weight: 400; }
+
+        #auth {
+            max-width: 320px;
+            margin: 10vh auto;
+            text-align: center;
+        }
+
+        #auth input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            color: #e0e0e0;
+            font-size: 1rem;
+            border-radius: 4px;
+            margin-bottom: 0.75rem;
+            outline: none;
+        }
+
+        #auth input:focus { border-color: #555; }
+
+        button {
+            padding: 0.75rem 2rem;
+            background: #fff;
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        button:hover { background: #e0e0e0; }
+
+        #app { display: none; }
+
+        #upload-btn {
+            margin-bottom: 3rem;
+        }
+
+        /* Gallery */
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 4rem;
+        }
+
+        .gallery-item {
+            position: relative;
+            aspect-ratio: 16/9;
+            background: #1a1a1a;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .gallery-item img,
+        .gallery-item video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .gallery-item .badge {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: rgba(0,0,0,0.6);
+            color: #fff;
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .gallery-item .delete-btn {
+            position: absolute;
+            bottom: 6px;
+            right: 6px;
+            background: rgba(180,0,0,0.75);
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        .gallery-item:hover .delete-btn { opacity: 1; }
+
+        .empty { color: #444; font-size: 0.9rem; }
+
+        #status {
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            color: #888;
+            min-height: 1.2em;
+        }
+
+        .error-msg   { color: #ff4444; }
+        .success-msg { color: #44cc88; }
+
+        /* Glass settings panel */
+        .section-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #555;
+            margin-bottom: 1.5rem;
+        }
+
+        .sliders {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.25rem 2.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .slider-row {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: #999;
+        }
+
+        .slider-label span { color: #e0e0e0; font-variant-numeric: tabular-nums; }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: #fff;
+            cursor: pointer;
+            height: 2px;
+            background: #333;
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+        }
+
+        .glass-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        #save-btn { background: #fff; color: #000; }
+        #reset-btn { background: transparent; color: #555; border: 1px solid #333; }
+        #reset-btn:hover { background: #1a1a1a; color: #e0e0e0; }
+
+        #cfg-status {
+            font-size: 0.85rem;
+            color: #888;
+            min-height: 1.2em;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <span class="logo">GLAS<span class="slash">/</span><span class="sub">furnace</span></span>
+</header>
+
+<div id="auth">
+    <input type="password" id="pw" placeholder="password" autocomplete="current-password" />
+    <br>
+    <button onclick="unlock()">Enter</button>
+</div>
+
+<div id="app">
+    <!-- Media upload -->
+    <button id="upload-btn" onclick="openWidget()">+ Upload image or video</button>
+    <div id="status"></div>
+    <div class="gallery" id="gallery"></div>
+
+    <!-- Glass settings -->
+    <p class="section-title">Glass settings</p>
+    <div class="sliders">
+        <div class="slider-row">
+            <div class="slider-label">Strength <span id="v-strength">30</span></div>
+            <input type="range" id="s-strength" min="0" max="80" step="1" value="30">
+        </div>
+        <div class="slider-row">
+            <div class="slider-label">Softness <span id="v-softness">1.4</span></div>
+            <input type="range" id="s-softness" min="0" max="10" step="0.1" value="1.4">
+        </div>
+        <div class="slider-row">
+            <div class="slider-label">Extra blur <span id="v-extraBlur">0</span></div>
+            <input type="range" id="s-extraBlur" min="0" max="20" step="0.5" value="0">
+        </div>
+        <div class="slider-row">
+            <div class="slider-label">Tinting <span id="v-tinting">0.16</span></div>
+            <input type="range" id="s-tinting" min="0" max="1" step="0.01" value="0.16">
+        </div>
+        <div class="slider-row">
+            <div class="slider-label">Contrast <span id="v-contrast">100</span></div>
+            <input type="range" id="s-contrast" min="50" max="200" step="1" value="100">
+        </div>
+        <div class="slider-row">
+            <div class="slider-label">Brightness <span id="v-brightness">100</span></div>
+            <input type="range" id="s-brightness" min="50" max="200" step="1" value="100">
+        </div>
+        <div class="slider-row">
+            <div class="slider-label">Invert <span id="v-invert">0</span></div>
+            <input type="range" id="s-invert" min="0" max="100" step="1" value="0">
+        </div>
+        <div class="slider-row">
+            <div class="slider-label">Edge specularity <span id="v-edgeSpecularity">0.18</span></div>
+            <input type="range" id="s-edgeSpecularity" min="0" max="1" step="0.01" value="0.18">
+        </div>
+    </div>
+    <div class="glass-actions">
+        <button id="save-btn" onclick="saveConfig()">Save glass settings</button>
+        <button id="reset-btn" onclick="resetConfig()">Reset to defaults</button>
+        <span id="cfg-status"></span>
+    </div>
+</div>
+
+<script src="https://upload-widget.cloudinary.com/global/all.js"></script>
+<script>
+    const CLOUD_NAME    = 'dpr7dmhgo';
+    const UPLOAD_PRESET = 'glas_upload';
+    const PASSWORD      = 'glas2025';
+    const SESSION_KEY   = 'glas_session';
+    const SESSION_TTL   = 15 * 60 * 1000;
+
+    const DEFAULTS = {
+        strength: 30, softness: 1.4, extraBlur: 0, tinting: 0.16,
+        contrast: 100, brightness: 100, invert: 0, edgeSpecularity: 0.18
+    };
+
+    // --- Session ---
+    function isSessionValid() {
+        const t = localStorage.getItem(SESSION_KEY);
+        return t && (Date.now() - parseInt(t)) < SESSION_TTL;
+    }
+
+    function showApp() {
+        document.getElementById('auth').style.display = 'none';
+        document.getElementById('app').style.display  = 'block';
+        loadGallery();
+        loadConfig();
+    }
+
+    function unlock() {
+        const pw = document.getElementById('pw').value;
+        if (pw === PASSWORD) {
+            localStorage.setItem(SESSION_KEY, Date.now().toString());
+            showApp();
+        } else {
+            document.getElementById('pw').style.borderColor = '#ff4444';
+        }
+    }
+
+    document.getElementById('pw').addEventListener('keydown', e => {
+        if (e.key === 'Enter') unlock();
+    });
+
+    // Auto-login if session still valid
+    if (isSessionValid()) {
+        showApp();
+    }
+
+    // --- Gallery ---
+    async function loadGallery() {
+        const gallery = document.getElementById('gallery');
+        gallery.innerHTML = '';
+        try {
+            const res = await fetch('/manifest.json');
+            const manifest = await res.json();
+            if (!manifest.length) {
+                gallery.innerHTML = '<p class="empty">No media yet — upload something.</p>';
+                return;
+            }
+            manifest.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'gallery-item';
+                const media = item.type === 'video'
+                    ? `<video src="${item.url}" muted loop autoplay playsinline></video>`
+                    : `<img src="${item.url}" alt="" />`;
+                el.innerHTML = `${media}<span class="badge">${item.type}</span><button class="delete-btn" onclick="deleteItem('${item.url}', this)">Remove</button>`;
+                gallery.appendChild(el);
+            });
+        } catch(e) {
+            gallery.innerHTML = '<p class="empty">Could not load gallery.</p>';
+        }
+    }
+
+    let widget;
+    function openWidget() {
+        if (!widget) {
+            widget = cloudinary.createUploadWidget({
+                cloudName: CLOUD_NAME,
+                uploadPreset: UPLOAD_PRESET,
+                sources: ['local', 'camera'],
+                resourceType: 'auto',
+                multiple: true,
+                clientAllowedFormats: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov', 'webm'],
+            }, async (error, result) => {
+                if (error) { setStatus('Upload error: ' + error.message, 'error'); return; }
+                if (result.event === 'success') {
+                    const url  = result.info.secure_url;
+                    const type = result.info.resource_type === 'video' ? 'video' : 'image';
+                    setStatus('Saving…');
+                    await addToManifest(url, type);
+                }
+            });
+        }
+        widget.open();
+    }
+
+    async function addToManifest(url, type) {
+        try {
+            const res = await fetch('/functions/update-manifest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url, type }),
+            });
+            if (res.ok) {
+                setStatus('Saved! Reloading…', 'success');
+                setTimeout(loadGallery, 1500);
+            } else {
+                setStatus('Error: ' + await res.text(), 'error');
+            }
+        } catch(e) { setStatus('Error: ' + e.message, 'error'); }
+    }
+
+    async function deleteItem(url, btn) {
+        if (!confirm('Remove this from the site?')) return;
+        btn.textContent = '…';
+        btn.disabled = true;
+        try {
+            const res = await fetch('/functions/delete-media', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url }),
+            });
+            if (res.ok) {
+                btn.closest('.gallery-item').remove();
+                setStatus('Removed.', 'success');
+            } else {
+                setStatus('Error: ' + await res.text(), 'error');
+                btn.textContent = 'Remove';
+                btn.disabled = false;
+            }
+        } catch(e) {
+            setStatus('Error: ' + e.message, 'error');
+            btn.textContent = 'Remove';
+            btn.disabled = false;
+        }
+    }
+
+    function setStatus(msg, cls) {
+        const el = document.getElementById('status');
+        el.textContent = msg;
+        el.className = cls === 'error' ? 'error-msg' : cls === 'success' ? 'success-msg' : '';
+    }
+
+    // --- Glass settings ---
+    const SLIDERS = ['strength', 'softness', 'extraBlur', 'tinting', 'contrast', 'brightness', 'invert', 'edgeSpecularity'];
+
+    // Wire up live value display
+    SLIDERS.forEach(key => {
+        const input = document.getElementById(`s-${key}`);
+        const val   = document.getElementById(`v-${key}`);
+        input.addEventListener('input', () => { val.textContent = input.value; });
+    });
+
+    async function loadConfig() {
+        try {
+            const res = await fetch('/config.json');
+            const cfg = await res.json();
+            applySliders(cfg);
+        } catch(e) {
+            applySliders(DEFAULTS);
+        }
+    }
+
+    function applySliders(cfg) {
+        SLIDERS.forEach(key => {
+            const val = cfg[key] ?? DEFAULTS[key];
+            const input = document.getElementById(`s-${key}`);
+            const label = document.getElementById(`v-${key}`);
+            input.value    = val;
+            label.textContent = val;
+        });
+    }
+
+    function readSliders() {
+        const cfg = {};
+        SLIDERS.forEach(key => {
+            cfg[key] = parseFloat(document.getElementById(`s-${key}`).value);
+        });
+        return cfg;
+    }
+
+    async function saveConfig() {
+        const cfg = readSliders();
+        setCfgStatus('Saving…');
+        try {
+            const res = await fetch('/functions/save-config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(cfg),
+            });
+            if (res.ok) {
+                setCfgStatus('Saved!', 'success');
+            } else {
+                setCfgStatus('Error: ' + await res.text(), 'error');
+            }
+        } catch(e) { setCfgStatus('Error: ' + e.message, 'error'); }
+    }
+
+    function resetConfig() {
+        applySliders(DEFAULTS);
+    }
+
+    function setCfgStatus(msg, cls) {
+        const el = document.getElementById('cfg-status');
+        el.textContent = msg;
+        el.className = cls === 'error' ? 'error-msg' : cls === 'success' ? 'success-msg' : '';
+        if (cls === 'success') setTimeout(() => { el.textContent = ''; }, 3000);
+    }
+</script>
+</body>
+</html>

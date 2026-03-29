@@ -7,6 +7,11 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
+        :root {
+            --tinting: 0.16;
+            --edge-spec: 0.18;
+        }
+
         body {
             width: 100vw;
             height: 100vh;
@@ -33,7 +38,6 @@
             z-index: 0;
         }
 
-        /* Wrapper sits above the background */
         #text-wrap {
             position: absolute;
             top: 50%;
@@ -43,7 +47,7 @@
             line-height: 1;
         }
 
-        /* Iridescent outline layer — sits behind the glass text */
+        /* Iridescent outline layer */
         #text-wrap::before {
             content: 'GLAS';
             position: absolute;
@@ -55,7 +59,7 @@
             line-height: 1;
             white-space: nowrap;
             -webkit-text-fill-color: transparent;
-            -webkit-text-stroke: 2px rgba(160, 220, 255, 0.18);
+            -webkit-text-stroke: 2px rgba(160, 220, 255, var(--edge-spec));
             filter: blur(0.5px);
             pointer-events: none;
         }
@@ -68,25 +72,18 @@
             line-height: 1;
             white-space: nowrap;
             user-select: none;
-
-            /* Glass: clip the background image to the text shape */
             -webkit-background-clip: text;
             background-clip: text;
-            -webkit-text-fill-color: rgba(255, 255, 255, 0.16);
+            -webkit-text-fill-color: rgba(255, 255, 255, var(--tinting));
             -webkit-text-stroke: 1px rgba(200, 235, 255, 0.12);
-
-            /* Background image + size set by JS to align with viewport */
             background-repeat: no-repeat;
-
-            /* Liquid distortion filter */
             filter: url(#liquid-glass);
         }
 
-        /* Fallback when manifest is empty */
         h1.plain {
             -webkit-background-clip: unset;
             background-clip: unset;
-            -webkit-text-fill-color: rgba(255, 255, 255, 0.16);
+            -webkit-text-fill-color: rgba(255, 255, 255, var(--tinting));
             background-image: none !important;
             filter: none;
         }
@@ -94,35 +91,38 @@
 </head>
 <body>
 
-    <!-- SVG liquid-glass filter -->
     <svg width="0" height="0" style="position:absolute;pointer-events:none" aria-hidden="true">
         <defs>
             <filter id="liquid-glass" x="-15%" y="-30%" width="130%" height="160%">
-                <!-- Generate organic liquid noise -->
                 <feTurbulence
+                    id="f-turbulence"
                     type="fractalNoise"
                     baseFrequency="0.016 0.020"
                     numOctaves="3"
                     seed="9"
                     result="noise" />
-                <!-- Displace the source graphic using the noise -->
                 <feDisplacementMap
+                    id="f-displacement"
                     in="SourceGraphic"
                     in2="noise"
                     scale="30"
                     xChannelSelector="R"
                     yChannelSelector="G"
                     result="displaced" />
-                <!-- Soft glass blur -->
                 <feGaussianBlur
+                    id="f-softness"
                     in="displaced"
                     stdDeviation="1.4"
-                    result="blurred" />
-                <!-- Clip distortion back to original letter shapes -->
+                    result="softened" />
                 <feComposite
-                    in="blurred"
+                    in="softened"
                     in2="SourceGraphic"
-                    operator="in" />
+                    operator="in"
+                    result="clipped" />
+                <feGaussianBlur
+                    id="f-extra-blur"
+                    in="clipped"
+                    stdDeviation="0" />
             </filter>
         </defs>
     </svg>
@@ -135,7 +135,36 @@
     </div>
 
     <script>
+        async function loadConfig() {
+            try {
+                const res = await fetch('/config.json');
+                return await res.json();
+            } catch (e) { return {}; }
+        }
+
+        function applyConfig(cfg) {
+            document.getElementById('f-displacement')?.setAttribute('scale', cfg.strength ?? 30);
+            document.getElementById('f-softness')?.setAttribute('stdDeviation', cfg.softness ?? 1.4);
+            document.getElementById('f-extra-blur')?.setAttribute('stdDeviation', cfg.extraBlur ?? 0);
+
+            document.documentElement.style.setProperty('--tinting', cfg.tinting ?? 0.16);
+            document.documentElement.style.setProperty('--edge-spec', cfg.edgeSpecularity ?? 0.18);
+
+            // Store for later use when glass text is applied
+            window._glasCfg = cfg;
+        }
+
+        function getFilterStr(cfg) {
+            const c = cfg.contrast    ?? 100;
+            const b = cfg.brightness  ?? 100;
+            const i = cfg.invert      ?? 0;
+            return `url(#liquid-glass) contrast(${c}%) brightness(${b}%) invert(${i}%)`;
+        }
+
         async function init() {
+            const cfg = await loadConfig();
+            applyConfig(cfg);
+
             let manifest = [];
             try {
                 const res = await fetch('/manifest.json');
@@ -150,38 +179,33 @@
                 const vid = document.getElementById('bg-video');
                 vid.src = item.url;
                 vid.style.display = 'block';
-                const h1 = document.getElementById('glas');
-                h1.classList.add('plain');
+                document.getElementById('glas').classList.add('plain');
             } else {
                 const smartUrl = cloudinarySmartCrop(item.url);
                 document.getElementById('bg').src = smartUrl;
-                applyGlassText(smartUrl);
+                applyGlassText(smartUrl, cfg);
             }
         }
 
         function cloudinarySmartCrop(url) {
-            // Only transform Cloudinary URLs
             if (!url.includes('res.cloudinary.com')) return url;
             const w = window.innerWidth  * window.devicePixelRatio | 0;
             const h = window.innerHeight * window.devicePixelRatio | 0;
-            // Inject c_fill,g_auto,w_,h_ after /upload/
             return url.replace('/upload/', `/upload/c_fill,g_auto,w_${w},h_${h}/`);
         }
 
-        function applyGlassText(url) {
+        function applyGlassText(url, cfg) {
             const h1 = document.getElementById('glas');
             h1.classList.remove('plain');
+            h1.style.filter = getFilterStr(cfg);
 
-            // Align the clipped background with the full-page background:
-            // We set the background to viewport size and offset by the element's position.
             function setPos() {
                 const rect = h1.getBoundingClientRect();
-                h1.style.backgroundImage = `url('${CSS.escape ? url : url}')`;
-                h1.style.backgroundSize  = `${window.innerWidth}px ${window.innerHeight}px`;
+                h1.style.backgroundImage    = `url('${url}')`;
+                h1.style.backgroundSize     = `${window.innerWidth}px ${window.innerHeight}px`;
                 h1.style.backgroundPosition = `-${rect.left}px -${rect.top}px`;
             }
 
-            // Wait for fonts and layout to settle
             document.fonts.ready.then(() => {
                 setPos();
                 window.addEventListener('resize', setPos);
