@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GLAS / furnace</title>
+    <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -278,6 +279,41 @@
         }
 
         .pattern-btn.active { border-color: #fff; }
+
+        /* Quill dark overrides */
+        .ql-toolbar.ql-snow {
+            border: 1px solid #333;
+            background: #1a1a1a;
+            border-radius: 4px 4px 0 0;
+        }
+        .ql-container.ql-snow {
+            border: 1px solid #333;
+            border-top: none;
+            background: #111;
+            border-radius: 0 0 4px 4px;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+        .ql-editor { color: #e0e0e0; font-size: 0.95rem; line-height: 1.6; min-height: 220px; }
+        .ql-editor.ql-blank::before { color: #444; font-style: normal; }
+        .ql-toolbar.ql-snow .ql-stroke { stroke: #999; }
+        .ql-toolbar.ql-snow .ql-fill  { fill: #999; }
+        .ql-toolbar.ql-snow .ql-picker { color: #999; }
+        .ql-toolbar.ql-snow button:hover .ql-stroke,
+        .ql-toolbar.ql-snow button.ql-active .ql-stroke { stroke: #fff; }
+        .ql-toolbar.ql-snow .ql-picker-options { background: #1a1a1a; border-color: #333; }
+        .ql-toolbar.ql-snow .ql-picker-item:hover { color: #fff; }
+        /* reset global button styles inside Quill toolbar */
+        .ql-toolbar.ql-snow button {
+            padding: 3px 5px !important;
+            background: transparent !important;
+            color: inherit !important;
+            border: none !important;
+            font-size: inherit !important;
+            font-weight: normal !important;
+            width: 28px !important;
+            height: 24px !important;
+            min-width: unset !important;
+        }
     </style>
 </head>
 <body>
@@ -363,15 +399,37 @@
         <button id="reset-btn" onclick="resetConfig()">Reset to defaults</button>
         <span id="cfg-status"></span>
     </div>
+
+    <!-- Page content -->
+    <p class="section-title">Page content</p>
+    <div id="editor"></div>
+    <div class="glass-actions">
+        <button onclick="saveContent()">Save content</button>
+        <span id="content-status"></span>
+    </div>
 </div>
 
 <script src="https://upload-widget.cloudinary.com/global/all.js"></script>
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 <script>
     const CLOUD_NAME    = 'dpr7dmhgo';
     const UPLOAD_PRESET = 'glas_upload';
     const PASSWORD      = 'glas2025';
     const SESSION_KEY   = 'glas_session';
     const SESSION_TTL   = 15 * 60 * 1000;
+
+    const quill = new Quill('#editor', {
+        theme: 'snow',
+        placeholder: 'Write or paste your page content here…',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{ header: [1, 2, false] }],
+                ['link'],
+                ['clean'],
+            ],
+        },
+    });
 
     const DEFAULTS = {
         strength: 30, softness: 1.4, extraBlur: 0, tinting: 0.16,
@@ -389,6 +447,7 @@
         document.getElementById('app').style.display  = 'block';
         loadGallery();
         loadConfig();
+        loadContent();
     }
 
     function unlock() {
@@ -613,6 +672,41 @@
 
     function setCfgStatus(msg, cls) {
         const el = document.getElementById('cfg-status');
+        el.textContent = msg;
+        el.className = cls === 'error' ? 'error-msg' : cls === 'success' ? 'success-msg' : '';
+        if (cls === 'success') setTimeout(() => { el.textContent = ''; }, 3000);
+    }
+
+    // --- Page content ---
+    async function loadContent() {
+        try {
+            const res = await fetch('/content.html');
+            if (res.ok) {
+                const html = await res.text();
+                if (html.trim()) quill.clipboard.dangerouslyPasteHTML(html);
+            }
+        } catch(e) {}
+    }
+
+    async function saveContent() {
+        const html = quill.root.innerHTML;
+        setContentStatus('Saving…');
+        try {
+            const res = await fetch('/functions/save-content', {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/html' },
+                body: html,
+            });
+            if (res.ok) {
+                setContentStatus('Saved!', 'success');
+            } else {
+                setContentStatus('Error: ' + await res.text(), 'error');
+            }
+        } catch(e) { setContentStatus('Error: ' + e.message, 'error'); }
+    }
+
+    function setContentStatus(msg, cls) {
+        const el = document.getElementById('content-status');
         el.textContent = msg;
         el.className = cls === 'error' ? 'error-msg' : cls === 'success' ? 'success-msg' : '';
         if (cls === 'success') setTimeout(() => { el.textContent = ''; }, 3000);

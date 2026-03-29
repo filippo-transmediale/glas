@@ -87,6 +87,60 @@
             background-image: none !important;
             filter: none;
         }
+
+        /* Info overlay */
+        #toggle-btn {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 20;
+            background: none;
+            border: none;
+            color: #fff;
+            text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0;
+            width: 2.5rem;
+            height: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+        }
+
+        #toggle-btn.open {
+            transform: rotate(45deg);
+        }
+
+        #overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 5;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        #overlay-inner {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 4rem 2rem 8rem;
+        }
+
+        #overlay-content {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            line-height: 1.45;
+            color: #000;
+        }
+
+        #overlay-content p { margin-bottom: 1em; }
+        #overlay-content p:last-child { margin-bottom: 0; }
     </style>
 </head>
 <body>
@@ -132,6 +186,13 @@
 
     <div id="text-wrap">
         <h1 id="glas" class="plain">GLAS</h1>
+    </div>
+
+    <button id="toggle-btn" onclick="toggleOverlay()" aria-label="Toggle info">+</button>
+    <div id="overlay">
+        <div id="overlay-inner">
+            <div id="overlay-content"></div>
+        </div>
     </div>
 
     <script>
@@ -210,6 +271,32 @@
                 setPos();
                 window.addEventListener('resize', setPos);
             });
+        }
+
+        let overlayLoaded = false;
+
+        async function loadOverlayContent() {
+            if (overlayLoaded) return;
+            overlayLoaded = true;
+            try {
+                const res = await fetch('/content.html');
+                if (res.ok) {
+                    document.getElementById('overlay-content').innerHTML = await res.text();
+                }
+            } catch(e) {}
+        }
+
+        function toggleOverlay() {
+            const btn     = document.getElementById('toggle-btn');
+            const overlay = document.getElementById('overlay');
+            const isOpen  = btn.classList.contains('open');
+            btn.classList.toggle('open');
+            if (!isOpen) {
+                loadOverlayContent();
+                overlay.style.display = 'block';
+            } else {
+                overlay.style.display = 'none';
+            }
         }
 
         init();
