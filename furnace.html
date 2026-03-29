@@ -198,6 +198,86 @@
             color: #888;
             min-height: 1.2em;
         }
+
+        /* Glass preview */
+        :root {
+            --preview-tinting: 0.16;
+            --preview-edge-spec: 0.18;
+        }
+
+        #preview-wrap {
+            position: relative;
+            width: 100%;
+            height: 260px;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        #preview-bg {
+            position: absolute;
+            inset: 0;
+        }
+
+        #preview-center {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        #preview-center::before {
+            content: 'GLAS';
+            position: absolute;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: clamp(4rem, 10vw, 7rem);
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            line-height: 1;
+            white-space: nowrap;
+            -webkit-text-fill-color: transparent;
+            -webkit-text-stroke: 2px rgba(160, 220, 255, var(--preview-edge-spec));
+            filter: blur(0.5px);
+            pointer-events: none;
+        }
+
+        #preview-glas {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: clamp(4rem, 10vw, 7rem);
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            line-height: 1;
+            white-space: nowrap;
+            user-select: none;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: rgba(255, 255, 255, var(--preview-tinting));
+            -webkit-text-stroke: 1px rgba(200, 235, 255, 0.12);
+            background-repeat: no-repeat;
+            filter: url(#preview-glass);
+        }
+
+        .pattern-btns {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            display: flex;
+            gap: 6px;
+        }
+
+        .pattern-btn {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.3);
+            padding: 0;
+            cursor: pointer;
+            transition: border-color 0.15s;
+        }
+
+        .pattern-btn.active { border-color: #fff; }
     </style>
 </head>
 <body>
@@ -220,6 +300,30 @@
 
     <!-- Glass settings -->
     <p class="section-title">Glass settings</p>
+
+    <!-- Preview -->
+    <svg width="0" height="0" style="position:absolute;pointer-events:none" aria-hidden="true">
+        <defs>
+            <filter id="preview-glass" x="-15%" y="-30%" width="130%" height="160%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.016 0.020" numOctaves="3" seed="9" result="noise" />
+                <feDisplacementMap id="pf-displacement" in="SourceGraphic" in2="noise" scale="30" xChannelSelector="R" yChannelSelector="G" result="displaced" />
+                <feGaussianBlur id="pf-softness" in="displaced" stdDeviation="1.4" result="softened" />
+                <feComposite in="softened" in2="SourceGraphic" operator="in" result="clipped" />
+                <feGaussianBlur id="pf-extra-blur" in="clipped" stdDeviation="0" />
+            </filter>
+        </defs>
+    </svg>
+
+    <div id="preview-wrap">
+        <div id="preview-bg"></div>
+        <div id="preview-center">
+            <h2 id="preview-glas">GLAS</h2>
+        </div>
+        <div class="pattern-btns">
+            <button class="pattern-btn active" id="pb-0" onclick="setPattern(0)"></button>
+            <button class="pattern-btn"        id="pb-1" onclick="setPattern(1)"></button>
+        </div>
+    </div>
     <div class="sliders">
         <div class="slider-row">
             <div class="slider-label">Strength <span id="v-strength">30</span></div>
@@ -404,11 +508,11 @@
     // --- Glass settings ---
     const SLIDERS = ['strength', 'softness', 'extraBlur', 'tinting', 'contrast', 'brightness', 'invert', 'edgeSpecularity'];
 
-    // Wire up live value display
+    // Wire up live value display + preview update
     SLIDERS.forEach(key => {
         const input = document.getElementById(`s-${key}`);
         const val   = document.getElementById(`v-${key}`);
-        input.addEventListener('input', () => { val.textContent = input.value; });
+        input.addEventListener('input', () => { val.textContent = input.value; updatePreview(); });
     });
 
     async function loadConfig() {
@@ -419,6 +523,7 @@
         } catch(e) {
             applySliders(DEFAULTS);
         }
+        document.fonts.ready.then(updatePreview);
     }
 
     function applySliders(cfg) {
@@ -439,6 +544,51 @@
         return cfg;
     }
 
+    // --- Preview ---
+    const PATTERNS = [
+        'radial-gradient(ellipse at 20% 35%, #ff6b35 0%, #ffcc02 25%, #e8f5b0 48%, #4ecdc4 72%, #2d6a8a 100%)',
+        'radial-gradient(ellipse at 78% 65%, #c026d3 0%, #7c3aed 28%, #2563eb 52%, #059669 76%, #ca8a04 100%)',
+    ];
+    let currentPattern = 0;
+
+    function setPattern(idx) {
+        currentPattern = idx;
+        document.querySelectorAll('.pattern-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
+        applyPreviewBg();
+        setPreviewTextPos();
+    }
+
+    function applyPreviewBg() {
+        document.getElementById('preview-bg').style.background = PATTERNS[currentPattern];
+    }
+
+    function setPreviewTextPos() {
+        const glas = document.getElementById('preview-glas');
+        const wrap = document.getElementById('preview-wrap');
+        const wrapRect = wrap.getBoundingClientRect();
+        const glassRect = glas.getBoundingClientRect();
+        glas.style.backgroundImage    = PATTERNS[currentPattern];
+        glas.style.backgroundSize     = `${wrapRect.width}px ${wrapRect.height}px`;
+        glas.style.backgroundPosition = `${wrapRect.left - glassRect.left}px ${wrapRect.top - glassRect.top}px`;
+    }
+
+    function updatePreview() {
+        const cfg = readSliders();
+        document.getElementById('pf-displacement').setAttribute('scale', cfg.strength);
+        document.getElementById('pf-softness').setAttribute('stdDeviation', cfg.softness);
+        document.getElementById('pf-extra-blur').setAttribute('stdDeviation', cfg.extraBlur);
+        document.documentElement.style.setProperty('--preview-tinting', cfg.tinting);
+        document.documentElement.style.setProperty('--preview-edge-spec', cfg.edgeSpecularity);
+        const glas = document.getElementById('preview-glas');
+        glas.style.filter = `url(#preview-glass) contrast(${cfg.contrast}%) brightness(${cfg.brightness}%) invert(${cfg.invert}%)`;
+        setPreviewTextPos();
+    }
+
+    // Init preview
+    applyPreviewBg();
+    PATTERNS.forEach((grad, i) => { document.getElementById(`pb-${i}`).style.background = grad; });
+    window.addEventListener('resize', setPreviewTextPos);
+
     async function saveConfig() {
         const cfg = readSliders();
         setCfgStatus('Saving…');
@@ -458,6 +608,7 @@
 
     function resetConfig() {
         applySliders(DEFAULTS);
+        updatePreview();
     }
 
     function setCfgStatus(msg, cls) {
