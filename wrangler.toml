@@ -1,0 +1,7 @@
+name = "glas"
+main = "_worker.js"
+compatibility_date = "2025-03-29"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "."
