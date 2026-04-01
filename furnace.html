@@ -302,6 +302,9 @@
         .ql-toolbar.ql-snow button.ql-active .ql-stroke { stroke: #fff; }
         .ql-toolbar.ql-snow .ql-picker-options { background: #1a1a1a; border-color: #333; }
         .ql-toolbar.ql-snow .ql-picker-item:hover { color: #fff; }
+        .ql-toolbar.ql-snow .ql-color-picker .ql-picker-options { background: #1a1a1a; border-color: #333; padding: 4px; }
+        .ql-toolbar.ql-snow .ql-font .ql-picker-label,
+        .ql-toolbar.ql-snow .ql-color .ql-picker-label { color: #999; border-color: #333; }
         /* reset global button styles inside Quill toolbar */
         .ql-toolbar.ql-snow button {
             padding: 3px 5px !important;
@@ -425,6 +428,8 @@
             toolbar: [
                 ['bold', 'italic', 'underline'],
                 [{ header: [1, 2, false] }],
+                [{ font: [] }],
+                [{ color: [] }],
                 ['link'],
                 ['clean'],
             ],
