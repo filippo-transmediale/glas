@@ -119,6 +119,46 @@ async function saveConfig(request, env) {
     return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
 }
 
+async function saveImpressum(request, env) {
+    let html;
+    try {
+        html = await request.text();
+    } catch(e) { return new Response('Bad request: ' + e.message, { status: 400 }); }
+
+    const { GITHUB_TOKEN: token, GITHUB_REPO: repo } = env;
+    if (!token || !repo) return new Response('Missing env vars', { status: 500 });
+
+    let sha = null;
+    const res = await ghGet(repo, 'impressum.html', token);
+    if (res.ok) sha = (await res.json()).sha;
+    else if (res.status !== 404) return new Response('GitHub error: ' + await res.text(), { status: 500 });
+
+    const put = await ghPut(repo, 'impressum.html', token, enc(html), sha, 'Update impressum');
+    if (!put.ok) return new Response('GitHub error: ' + await put.text(), { status: 500 });
+
+    return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
+}
+
+async function saveContact(request, env) {
+    let html;
+    try {
+        html = await request.text();
+    } catch(e) { return new Response('Bad request: ' + e.message, { status: 400 }); }
+
+    const { GITHUB_TOKEN: token, GITHUB_REPO: repo } = env;
+    if (!token || !repo) return new Response('Missing env vars', { status: 500 });
+
+    let sha = null;
+    const res = await ghGet(repo, 'contact.html', token);
+    if (res.ok) sha = (await res.json()).sha;
+    else if (res.status !== 404) return new Response('GitHub error: ' + await res.text(), { status: 500 });
+
+    const put = await ghPut(repo, 'contact.html', token, enc(html), sha, 'Update contact');
+    if (!put.ok) return new Response('GitHub error: ' + await put.text(), { status: 500 });
+
+    return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
+}
+
 async function saveContent(request, env) {
     let html;
     try {
@@ -149,6 +189,8 @@ export default {
             if (pathname === '/functions/delete-media')    return deleteMedia(request, env);
             if (pathname === '/functions/save-config')     return saveConfig(request, env);
             if (pathname === '/functions/save-content')    return saveContent(request, env);
+            if (pathname === '/functions/save-impressum') return saveImpressum(request, env);
+            if (pathname === '/functions/save-contact')   return saveContact(request, env);
         }
 
         // Serve static assets (HTML, JSON, images, etc.)

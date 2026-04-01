@@ -403,12 +403,28 @@
         <span id="cfg-status"></span>
     </div>
 
-    <!-- Page content -->
-    <p class="section-title">Page content</p>
+    <!-- Page content (Read overlay) -->
+    <p class="section-title" style="margin-top:4rem">Read overlay</p>
     <div id="editor"></div>
-    <div class="glass-actions">
-        <button onclick="saveContent()">Save content</button>
+    <div class="glass-actions" style="margin-top:1rem">
+        <button onclick="saveContent()">Save</button>
         <span id="content-status"></span>
+    </div>
+
+    <!-- Impressum overlay -->
+    <p class="section-title" style="margin-top:4rem">Impressum overlay</p>
+    <div id="editor-impressum"></div>
+    <div class="glass-actions" style="margin-top:1rem">
+        <button onclick="saveImpressum()">Save</button>
+        <span id="impressum-status"></span>
+    </div>
+
+    <!-- Contact overlay -->
+    <p class="section-title" style="margin-top:4rem">Contact overlay</p>
+    <div id="editor-contact"></div>
+    <div class="glass-actions" style="margin-top:1rem;margin-bottom:4rem">
+        <button onclick="saveContact()">Save</button>
+        <span id="contact-status"></span>
     </div>
 </div>
 
@@ -421,19 +437,31 @@
     const SESSION_KEY   = 'glas_session';
     const SESSION_TTL   = 15 * 60 * 1000;
 
+    const TOOLBAR_CFG = [
+        ['bold', 'italic', 'underline'],
+        [{ header: [1, 2, false] }],
+        [{ font: [] }],
+        [{ color: [] }],
+        ['link'],
+        ['clean'],
+    ];
+
     const quill = new Quill('#editor', {
         theme: 'snow',
         placeholder: 'Write or paste your page content here…',
-        modules: {
-            toolbar: [
-                ['bold', 'italic', 'underline'],
-                [{ header: [1, 2, false] }],
-                [{ font: [] }],
-                [{ color: [] }],
-                ['link'],
-                ['clean'],
-            ],
-        },
+        modules: { toolbar: TOOLBAR_CFG },
+    });
+
+    const quillImpressum = new Quill('#editor-impressum', {
+        theme: 'snow',
+        placeholder: 'Impressum text…',
+        modules: { toolbar: TOOLBAR_CFG },
+    });
+
+    const quillContact = new Quill('#editor-contact', {
+        theme: 'snow',
+        placeholder: 'Contact text…',
+        modules: { toolbar: TOOLBAR_CFG },
     });
 
     const DEFAULTS = {
@@ -453,6 +481,8 @@
         loadGallery();
         loadConfig();
         loadContent();
+        loadImpressum();
+        loadContact();
     }
 
     function unlock() {
@@ -712,6 +742,76 @@
 
     function setContentStatus(msg, cls) {
         const el = document.getElementById('content-status');
+        el.textContent = msg;
+        el.className = cls === 'error' ? 'error-msg' : cls === 'success' ? 'success-msg' : '';
+        if (cls === 'success') setTimeout(() => { el.textContent = ''; }, 3000);
+    }
+
+    // --- Impressum ---
+    async function loadImpressum() {
+        try {
+            const res = await fetch('/impressum.html');
+            if (res.ok) {
+                const html = await res.text();
+                if (html.trim()) quillImpressum.clipboard.dangerouslyPasteHTML(html);
+            }
+        } catch(e) {}
+    }
+
+    async function saveImpressum() {
+        const html = quillImpressum.root.innerHTML;
+        setImpressumStatus('Saving…');
+        try {
+            const res = await fetch('/functions/save-impressum', {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/html' },
+                body: html,
+            });
+            if (res.ok) {
+                setImpressumStatus('Saved!', 'success');
+            } else {
+                setImpressumStatus('Error: ' + await res.text(), 'error');
+            }
+        } catch(e) { setImpressumStatus('Error: ' + e.message, 'error'); }
+    }
+
+    function setImpressumStatus(msg, cls) {
+        const el = document.getElementById('impressum-status');
+        el.textContent = msg;
+        el.className = cls === 'error' ? 'error-msg' : cls === 'success' ? 'success-msg' : '';
+        if (cls === 'success') setTimeout(() => { el.textContent = ''; }, 3000);
+    }
+
+    // --- Contact ---
+    async function loadContact() {
+        try {
+            const res = await fetch('/contact.html');
+            if (res.ok) {
+                const html = await res.text();
+                if (html.trim()) quillContact.clipboard.dangerouslyPasteHTML(html);
+            }
+        } catch(e) {}
+    }
+
+    async function saveContact() {
+        const html = quillContact.root.innerHTML;
+        setContactStatus('Saving…');
+        try {
+            const res = await fetch('/functions/save-contact', {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/html' },
+                body: html,
+            });
+            if (res.ok) {
+                setContactStatus('Saved!', 'success');
+            } else {
+                setContactStatus('Error: ' + await res.text(), 'error');
+            }
+        } catch(e) { setContactStatus('Error: ' + e.message, 'error'); }
+    }
+
+    function setContactStatus(msg, cls) {
+        const el = document.getElementById('contact-status');
         el.textContent = msg;
         el.className = cls === 'error' ? 'error-msg' : cls === 'success' ? 'success-msg' : '';
         if (cls === 'success') setTimeout(() => { el.textContent = ''; }, 3000);
