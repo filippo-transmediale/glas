@@ -12,29 +12,35 @@
             --edge-spec: 0.18;
         }
 
-        body {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            height: var(--vh, 100vh);
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100dvh;
             overflow: hidden;
             background: #000;
         }
 
+        body {
+            position: relative;
+        }
+
         #bg {
-            position: absolute;
-            inset: 0;
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            height: 100%;
+            height: 100dvh;
             object-fit: cover;
             z-index: 0;
         }
 
         #bg-video {
-            position: absolute;
-            inset: 0;
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            height: 100%;
+            height: 100dvh;
             object-fit: cover;
             display: none;
             z-index: 0;
@@ -205,13 +211,6 @@
     </div>
 
     <script>
-        // Set --vh to the real visible height (fixes iOS Safari toolbar gap)
-        function setVH() {
-            document.documentElement.style.setProperty('--vh', window.innerHeight + 'px');
-        }
-        setVH();
-        window.addEventListener('resize', setVH);
-
         async function loadConfig() {
             try {
                 const res = await fetch('/config.json');
