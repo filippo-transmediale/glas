@@ -151,63 +151,38 @@
 
         #footer a:hover { opacity: 1; }
 
-        /* Overlay */
-        #overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 10;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        #overlay-inner {
-            max-width: 800px;
-            width: 100%;
-            margin: auto;
-            padding: 4rem 2rem;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-        }
-
-        #overlay-content {
-            width: 100%;
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            font-size: 1.5rem;
+        #footer a.active {
+            opacity: 1;
             font-weight: 700;
-            line-height: 1.45;
-            color: #000;
-            text-align: center;
         }
 
-        #overlay-content p { margin-bottom: 1em; }
-        #overlay-content p:last-child { margin-bottom: 0; }
-        #overlay-content a { color: inherit; text-decoration: underline; }
+        /* Content panel */
+        #content-panel {
+            display: none;
+            padding: 1.5rem 2rem 4rem;
+        }
 
-        /* Close button */
-        #overlay-close {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            z-index: 20;
-            background: none;
-            border: none;
-            color: #000;
-            text-shadow: 0 1px 6px rgba(255,255,255,0.4);
+        #panel-box {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-radius: 8px;
+            padding: 3rem 2.5rem;
+        }
+
+        #panel-content {
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            font-size: 2.5rem;
+            font-size: 1.1rem;
             font-weight: 400;
-            line-height: 1;
-            cursor: pointer;
-            padding: 0;
-            width: 3rem;
-            height: 3rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transform: rotate(45deg);
+            line-height: 1.6;
+            color: #000;
         }
+
+        #panel-content p { margin-bottom: 1em; }
+        #panel-content p:last-child { margin-bottom: 0; }
+        #panel-content a { color: inherit; text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -264,16 +239,15 @@
     </div>
 
     <footer id="footer">
-        <a onclick="openOverlay('impressum')">Impressum</a>
-        <a onclick="openOverlay('contact')">Contact</a>
-        <a onclick="openOverlay('read')">Read</a>
+        <a data-key="impressum" onclick="showPanel('impressum')">Impressum</a>
+        <a data-key="contact"   onclick="showPanel('contact')">Contact</a>
+        <a data-key="read"      onclick="showPanel('read')">Read</a>
     </footer>
 
-    <div id="overlay">
-        <div id="overlay-inner">
-            <div id="overlay-content"></div>
+    <div id="content-panel">
+        <div id="panel-box">
+            <div id="panel-content"></div>
         </div>
-        <button id="overlay-close" onclick="closeOverlay()" aria-label="Close">+</button>
     </div>
 
     <script>
@@ -381,28 +355,36 @@
         }
         window.addEventListener('scroll', updateScrollHint, { passive: true });
 
-        function hideScrollHint() {
-            document.getElementById('scroll-hint').classList.add('hidden');
-        }
+        // Panel
+        const panelCache = {};
+        let activeKey = null;
 
-        // Overlay
-        const overlayCache = {};
+        async function showPanel(key) {
+            const panel   = document.getElementById('content-panel');
+            const content = document.getElementById('panel-content');
 
-        async function openOverlay(key) {
-            const fileMap = {
-                impressum: '/impressum.html',
-                contact:   '/contact.html',
-                read:      '/content.html',
-            };
-            const overlay = document.getElementById('overlay');
-            const content = document.getElementById('overlay-content');
+            // toggle off if same key clicked again
+            if (activeKey === key) {
+                panel.style.display = 'none';
+                document.querySelectorAll('#footer a').forEach(a => a.classList.remove('active'));
+                activeKey = null;
+                return;
+            }
 
-            overlay.style.display = 'block';
-            document.body.style.overflow = 'hidden';
-            hideScrollHint();
+            // set active nav state
+            document.querySelectorAll('#footer a').forEach(a => a.classList.remove('active'));
+            document.querySelector(`#footer a[data-key="${key}"]`).classList.add('active');
+            activeKey = key;
 
-            if (overlayCache[key] !== undefined) {
-                content.innerHTML = overlayCache[key];
+            // show panel and scroll to footer
+            panel.style.display = 'block';
+            document.getElementById('footer').scrollIntoView({ behavior: 'smooth' });
+
+            // load content (cached)
+            const fileMap = { impressum: '/impressum.html', contact: '/contact.html', read: '/content.html' };
+
+            if (panelCache[key] !== undefined) {
+                content.innerHTML = panelCache[key];
                 return;
             }
 
@@ -410,17 +392,9 @@
             try {
                 const res = await fetch(fileMap[key]);
                 const html = res.ok ? await res.text() : '';
-                overlayCache[key] = html;
+                panelCache[key] = html;
                 content.innerHTML = html;
-            } catch(e) {
-                overlayCache[key] = '';
-            }
-        }
-
-        function closeOverlay() {
-            document.getElementById('overlay').style.display = 'none';
-            document.body.style.overflow = '';
-            updateScrollHint();
+            } catch(e) { panelCache[key] = ''; }
         }
 
         init();
