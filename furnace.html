@@ -305,6 +305,146 @@
         .ql-toolbar.ql-snow .ql-color-picker .ql-picker-options { background: #1a1a1a; border-color: #333; padding: 4px; }
         .ql-toolbar.ql-snow .ql-font .ql-picker-label,
         .ql-toolbar.ql-snow .ql-color .ql-picker-label { color: #999; border-color: #333; }
+        /* Sections manager */
+        .section-tabs {
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+            border-bottom: 1px solid #2a2a2a;
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            scrollbar-width: none;
+        }
+        .section-tabs::-webkit-scrollbar { display: none; }
+
+        .section-tab {
+            padding: 0.55rem 1.1rem !important;
+            background: transparent !important;
+            color: #555 !important;
+            border: none !important;
+            border-bottom: 2px solid transparent !important;
+            border-radius: 0 !important;
+            font-size: 0.82rem !important;
+            font-weight: 400 !important;
+            cursor: pointer !important;
+            white-space: nowrap;
+            margin-bottom: -1px;
+            width: auto !important;
+            height: auto !important;
+            min-width: unset !important;
+        }
+        .section-tab:hover { color: #ccc !important; background: transparent !important; }
+        .section-tab.active {
+            color: #fff !important;
+            border-bottom: 2px solid #fff !important;
+            font-weight: 600 !important;
+            background: transparent !important;
+        }
+
+        .add-tab-btn {
+            padding: 0.4rem 0.85rem !important;
+            background: transparent !important;
+            color: #3a3a3a !important;
+            border: 1px dashed #2a2a2a !important;
+            border-radius: 4px !important;
+            font-size: 0.76rem !important;
+            cursor: pointer !important;
+            white-space: nowrap;
+            width: auto !important;
+            height: auto !important;
+            min-width: unset !important;
+            font-weight: 400 !important;
+            align-self: center;
+            margin-left: 0.5rem;
+        }
+        .add-tab-btn:hover { color: #888 !important; border-color: #444 !important; background: transparent !important; }
+
+        .section-panel { display: none; padding-top: 1.25rem; }
+        .section-panel.active { display: block; }
+
+        .section-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .section-title-input {
+            flex: 1;
+            min-width: 160px;
+            padding: 0.48rem 0.75rem;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            color: #e0e0e0;
+            font-size: 0.9rem;
+            border-radius: 4px;
+            outline: none;
+        }
+        .section-title-input:focus { border-color: #555; }
+
+        .enabled-label {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.8rem;
+            color: #555;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+        .enabled-label input[type="checkbox"] {
+            accent-color: #fff;
+            width: 13px;
+            height: 13px;
+            cursor: pointer;
+        }
+
+        .section-html-btn {
+            padding: 0.35rem 0.75rem !important;
+            background: transparent !important;
+            color: #4a4a4a !important;
+            border: 1px solid #2a2a2a !important;
+            border-radius: 4px !important;
+            font-size: 0.76rem !important;
+            cursor: pointer !important;
+            width: auto !important; height: auto !important; min-width: unset !important;
+            font-weight: 400 !important;
+        }
+        .section-html-btn:hover { color: #999 !important; background: transparent !important; }
+        .section-html-btn.html-on { color: #fff !important; border-color: #555 !important; }
+
+        .section-delete-btn {
+            padding: 0.35rem 0.75rem !important;
+            background: transparent !important;
+            color: #4a2a2a !important;
+            border: 1px solid #3a1a1a !important;
+            border-radius: 4px !important;
+            font-size: 0.76rem !important;
+            cursor: pointer !important;
+            width: auto !important; height: auto !important; min-width: unset !important;
+            font-weight: 400 !important;
+        }
+        .section-delete-btn:hover { color: #ff4444 !important; border-color: #ff4444 !important; background: transparent !important; }
+
+        .raw-html-area {
+            display: none;
+            width: 100%;
+            min-height: 220px;
+            background: #070707;
+            border: 1px solid #333;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            color: #7ec8e3;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 0.79rem;
+            line-height: 1.55;
+            padding: 1rem;
+            resize: vertical;
+            outline: none;
+            tab-size: 2;
+        }
+
         /* reset global button styles inside Quill toolbar */
         .ql-toolbar.ql-snow button {
             padding: 3px 5px !important;
@@ -403,28 +543,13 @@
         <span id="cfg-status"></span>
     </div>
 
-    <!-- Page content (Read overlay) -->
-    <p class="section-title" style="margin-top:4rem">Read overlay</p>
-    <div id="editor"></div>
-    <div class="glass-actions" style="margin-top:1rem">
-        <button onclick="saveContent()">Save</button>
-        <span id="content-status"></span>
-    </div>
-
-    <!-- Impressum overlay -->
-    <p class="section-title" style="margin-top:4rem">Impressum overlay</p>
-    <div id="editor-impressum"></div>
-    <div class="glass-actions" style="margin-top:1rem">
-        <button onclick="saveImpressum()">Save</button>
-        <span id="impressum-status"></span>
-    </div>
-
-    <!-- Contact overlay -->
-    <p class="section-title" style="margin-top:4rem">Contact overlay</p>
-    <div id="editor-contact"></div>
-    <div class="glass-actions" style="margin-top:1rem;margin-bottom:4rem">
-        <button onclick="saveContact()">Save</button>
-        <span id="contact-status"></span>
+    <!-- Sections manager -->
+    <p class="section-title" style="margin-top:4rem">Page sections</p>
+    <div class="section-tabs" id="section-tabs"></div>
+    <div id="section-panels"></div>
+    <div class="glass-actions" style="margin-top:1.5rem;margin-bottom:4rem">
+        <button onclick="saveSections()">Save sections</button>
+        <span id="sections-status"></span>
     </div>
 </div>
 
@@ -446,23 +571,8 @@
         ['clean'],
     ];
 
-    const quill = new Quill('#editor', {
-        theme: 'snow',
-        placeholder: 'Write or paste your page content here…',
-        modules: { toolbar: TOOLBAR_CFG },
-    });
-
-    const quillImpressum = new Quill('#editor-impressum', {
-        theme: 'snow',
-        placeholder: 'Impressum text…',
-        modules: { toolbar: TOOLBAR_CFG },
-    });
-
-    const quillContact = new Quill('#editor-contact', {
-        theme: 'snow',
-        placeholder: 'Contact text…',
-        modules: { toolbar: TOOLBAR_CFG },
-    });
+    // Quill instances are created dynamically per section
+    const quills = {};
 
     const DEFAULTS = {
         strength: 30, softness: 1.4, extraBlur: 0, tinting: 0.16,
@@ -480,9 +590,7 @@
         document.getElementById('app').style.display  = 'block';
         loadGallery();
         loadConfig();
-        loadContent();
-        loadImpressum();
-        loadContact();
+        loadSections();
     }
 
     function unlock() {
@@ -712,106 +820,224 @@
         if (cls === 'success') setTimeout(() => { el.textContent = ''; }, 3000);
     }
 
-    // --- Page content ---
-    async function loadContent() {
+    // --- Sections manager ---
+    let sections = [];
+    let activeTabId = null;
+
+    function escHtml(s) {
+        return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    async function loadSections() {
+        // Try sections.json first; fall back to migrating old individual files
         try {
-            const res = await fetch('/content.html');
+            const res = await fetch('/sections.json');
             if (res.ok) {
-                const html = await res.text();
-                if (html.trim()) quill.clipboard.dangerouslyPasteHTML(html);
+                const data = await res.json();
+                if (Array.isArray(data) && data.length) {
+                    sections = data;
+                    renderSections();
+                    activateTab(sections[0].id);
+                    return;
+                }
             }
         } catch(e) {}
+
+        // Migrate from old files
+        const fetchSafe = async url => {
+            try { const r = await fetch(url); return r.ok ? await r.text() : ''; } catch(e) { return ''; }
+        };
+        const [imp, con, read] = await Promise.all([
+            fetchSafe('/impressum.html'),
+            fetchSafe('/contact.html'),
+            fetchSafe('/content.html'),
+        ]);
+        sections = [
+            { id: 'impressum', title: 'Impressum', content: imp,  enabled: true },
+            { id: 'contact',   title: 'Contact',   content: con,  enabled: true },
+            { id: 'read',      title: 'Read',       content: read, enabled: true },
+        ];
+        renderSections();
+        activateTab(sections[0].id);
     }
 
-    async function saveContent() {
-        const html = quill.root.innerHTML;
-        setContentStatus('Saving…');
+    function renderSections() {
+        const tabsEl   = document.getElementById('section-tabs');
+        const panelsEl = document.getElementById('section-panels');
+
+        // Sync quill content before re-render
+        sections.forEach(s => { if (quills[s.id]) s.content = quills[s.id].root.innerHTML; });
+
+        // Tabs
+        tabsEl.innerHTML = '';
+        sections.forEach(s => {
+            const btn = document.createElement('button');
+            btn.className = 'section-tab' + (s.id === activeTabId ? ' active' : '');
+            btn.textContent = s.title || 'Untitled';
+            btn.onclick = () => activateTab(s.id);
+            tabsEl.appendChild(btn);
+        });
+        if (sections.length < 7) {
+            const add = document.createElement('button');
+            add.className = 'add-tab-btn';
+            add.textContent = '+ Add section';
+            add.onclick = addSection;
+            tabsEl.appendChild(add);
+        }
+
+        // Remove panels for deleted sections
+        panelsEl.querySelectorAll('.section-panel').forEach(el => {
+            if (!sections.find(s => s.id === el.dataset.sid)) el.remove();
+        });
+
+        // Create/update panels
+        sections.forEach(s => {
+            let panel = document.getElementById(`panel-${s.id}`);
+            if (!panel) {
+                panel = document.createElement('div');
+                panel.className = 'section-panel';
+                panel.id = `panel-${s.id}`;
+                panel.dataset.sid = s.id;
+                panel.innerHTML = `
+                    <div class="section-meta">
+                        <input class="section-title-input" type="text" value="${escHtml(s.title)}"
+                               placeholder="Menu label"
+                               oninput="updateSectionTitle('${s.id}', this.value)">
+                        <label class="enabled-label">
+                            <input type="checkbox" ${s.enabled !== false ? 'checked' : ''}
+                                   onchange="updateSectionEnabled('${s.id}', this.checked)"> Enabled
+                        </label>
+                        <button class="section-html-btn" id="htmlbtn-${s.id}"
+                                onclick="toggleHtmlView('${s.id}')">HTML</button>
+                        <button class="section-delete-btn"
+                                onclick="deleteSection('${s.id}')">Delete</button>
+                    </div>
+                    <div id="editor-${s.id}"></div>
+                    <textarea class="raw-html-area" id="rawhtml-${s.id}" spellcheck="false"></textarea>
+                `;
+                panelsEl.appendChild(panel);
+
+                // Init Quill
+                const q = new Quill(`#editor-${s.id}`, {
+                    theme: 'snow',
+                    placeholder: 'Section content…',
+                    modules: { toolbar: TOOLBAR_CFG },
+                });
+                if (s.content && s.content.trim()) q.clipboard.dangerouslyPasteHTML(s.content);
+                quills[s.id] = q;
+            } else {
+                // Sync title input
+                const inp = panel.querySelector('.section-title-input');
+                if (inp) inp.value = s.title;
+            }
+            panel.classList.toggle('active', s.id === activeTabId);
+        });
+    }
+
+    function activateTab(id) {
+        activeTabId = id;
+        document.querySelectorAll('.section-tab').forEach((btn, i) => {
+            btn.classList.toggle('active', sections[i]?.id === id);
+        });
+        document.querySelectorAll('.section-panel').forEach(el => {
+            el.classList.toggle('active', el.id === `panel-${id}`);
+        });
+    }
+
+    function updateSectionTitle(id, value) {
+        const s = sections.find(s => s.id === id);
+        if (!s) return;
+        s.title = value;
+        // update tab label live
+        document.querySelectorAll('.section-tab').forEach((btn, i) => {
+            if (sections[i]?.id === id) btn.textContent = value || 'Untitled';
+        });
+    }
+
+    function updateSectionEnabled(id, checked) {
+        const s = sections.find(s => s.id === id);
+        if (s) s.enabled = checked;
+    }
+
+    function addSection() {
+        if (sections.length >= 7) return;
+        const id = 'sec_' + Date.now();
+        sections.push({ id, title: 'New section', content: '', enabled: true });
+        activeTabId = id;
+        renderSections();
+        setTimeout(() => {
+            const inp = document.querySelector(`#panel-${id} .section-title-input`);
+            if (inp) { inp.focus(); inp.select(); }
+        }, 50);
+    }
+
+    function deleteSection(id) {
+        if (!confirm('Delete this section? This cannot be undone until you save.')) return;
+        const idx = sections.findIndex(s => s.id === id);
+        if (idx === -1) return;
+        sections.splice(idx, 1);
+        delete quills[id];
+        document.getElementById(`panel-${id}`)?.remove();
+        if (activeTabId === id) {
+            activeTabId = sections.length ? sections[Math.max(0, idx - 1)].id : null;
+        }
+        renderSections();
+        if (activeTabId) activateTab(activeTabId);
+    }
+
+    function toggleHtmlView(id) {
+        const editorEl = document.getElementById(`editor-${id}`);
+        const textarea = document.getElementById(`rawhtml-${id}`);
+        const btn      = document.getElementById(`htmlbtn-${id}`);
+        const q        = quills[id];
+        const isHtmlOn = btn.classList.contains('html-on');
+
+        if (isHtmlOn) {
+            // HTML → Rich text
+            if (q) q.clipboard.dangerouslyPasteHTML(textarea.value);
+            textarea.style.display = 'none';
+            editorEl.style.display = '';
+            btn.classList.remove('html-on');
+            btn.textContent = 'HTML';
+        } else {
+            // Rich text → HTML
+            textarea.value = q ? q.root.innerHTML : '';
+            editorEl.style.display = 'none';
+            textarea.style.display = 'block';
+            btn.classList.add('html-on');
+            btn.textContent = 'Rich text';
+        }
+    }
+
+    async function saveSections() {
+        // Collect current content from active view (rich text or HTML)
+        sections.forEach(s => {
+            const textarea = document.getElementById(`rawhtml-${s.id}`);
+            const btn      = document.getElementById(`htmlbtn-${s.id}`);
+            if (btn && btn.classList.contains('html-on')) {
+                s.content = textarea ? textarea.value : '';
+            } else if (quills[s.id]) {
+                s.content = quills[s.id].root.innerHTML;
+            }
+        });
+
+        setSectionsStatus('Saving…');
         try {
-            const res = await fetch('/functions/save-content', {
+            const res = await fetch('/functions/save-sections', {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/html' },
-                body: html,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(sections),
             });
             if (res.ok) {
-                setContentStatus('Saved!', 'success');
+                setSectionsStatus('Saved!', 'success');
             } else {
-                setContentStatus('Error: ' + await res.text(), 'error');
+                setSectionsStatus('Error: ' + await res.text(), 'error');
             }
-        } catch(e) { setContentStatus('Error: ' + e.message, 'error'); }
+        } catch(e) { setSectionsStatus('Error: ' + e.message, 'error'); }
     }
 
-    function setContentStatus(msg, cls) {
-        const el = document.getElementById('content-status');
-        el.textContent = msg;
-        el.className = cls === 'error' ? 'error-msg' : cls === 'success' ? 'success-msg' : '';
-        if (cls === 'success') setTimeout(() => { el.textContent = ''; }, 3000);
-    }
-
-    // --- Impressum ---
-    async function loadImpressum() {
-        try {
-            const res = await fetch('/impressum.html');
-            if (res.ok) {
-                const html = await res.text();
-                if (html.trim()) quillImpressum.clipboard.dangerouslyPasteHTML(html);
-            }
-        } catch(e) {}
-    }
-
-    async function saveImpressum() {
-        const html = quillImpressum.root.innerHTML;
-        setImpressumStatus('Saving…');
-        try {
-            const res = await fetch('/functions/save-impressum', {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/html' },
-                body: html,
-            });
-            if (res.ok) {
-                setImpressumStatus('Saved!', 'success');
-            } else {
-                setImpressumStatus('Error: ' + await res.text(), 'error');
-            }
-        } catch(e) { setImpressumStatus('Error: ' + e.message, 'error'); }
-    }
-
-    function setImpressumStatus(msg, cls) {
-        const el = document.getElementById('impressum-status');
-        el.textContent = msg;
-        el.className = cls === 'error' ? 'error-msg' : cls === 'success' ? 'success-msg' : '';
-        if (cls === 'success') setTimeout(() => { el.textContent = ''; }, 3000);
-    }
-
-    // --- Contact ---
-    async function loadContact() {
-        try {
-            const res = await fetch('/contact.html');
-            if (res.ok) {
-                const html = await res.text();
-                if (html.trim()) quillContact.clipboard.dangerouslyPasteHTML(html);
-            }
-        } catch(e) {}
-    }
-
-    async function saveContact() {
-        const html = quillContact.root.innerHTML;
-        setContactStatus('Saving…');
-        try {
-            const res = await fetch('/functions/save-contact', {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/html' },
-                body: html,
-            });
-            if (res.ok) {
-                setContactStatus('Saved!', 'success');
-            } else {
-                setContactStatus('Error: ' + await res.text(), 'error');
-            }
-        } catch(e) { setContactStatus('Error: ' + e.message, 'error'); }
-    }
-
-    function setContactStatus(msg, cls) {
-        const el = document.getElementById('contact-status');
+    function setSectionsStatus(msg, cls) {
+        const el = document.getElementById('sections-status');
         el.textContent = msg;
         el.className = cls === 'error' ? 'error-msg' : cls === 'success' ? 'success-msg' : '';
         if (cls === 'success') setTimeout(() => { el.textContent = ''; }, 3000);

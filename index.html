@@ -149,27 +149,33 @@
             transition: opacity 0.2s;
         }
 
-        #footer a:hover { opacity: 1; }
-
+        #footer a:hover,
         #footer a.active {
             opacity: 1;
-            font-weight: 700;
+            text-decoration: underline;
+            text-underline-offset: 4px;
         }
+
+        #footer a.active { font-weight: 700; }
 
         /* Content panel */
         #content-panel {
             display: none;
-            padding: 1.5rem 2rem 4rem;
+            padding: 1.5rem 2rem 5rem;
         }
 
         #panel-box {
             max-width: 800px;
             margin: 0 auto;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(24px) saturate(1.3);
+            -webkit-backdrop-filter: blur(24px) saturate(1.3);
+            border-radius: 16px;
             padding: 3rem 2.5rem;
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.45),
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                0 0 80px 30px rgba(255, 255, 255, 0.12);
         }
 
         #panel-content {
@@ -296,6 +302,24 @@
             const cfg = await loadConfig();
             applyConfig(cfg);
 
+            // Load sections and render footer nav
+            let sections = [];
+            try {
+                const res = await fetch('/sections.json');
+                if (res.ok) sections = await res.json();
+            } catch(e) {}
+
+            window._sections = sections;
+
+            const footer = document.getElementById('footer');
+            const enabled = sections.filter(s => s.enabled !== false);
+            if (enabled.length) {
+                footer.innerHTML = enabled
+                    .map(s => `<a data-key="${s.id}" onclick="showPanel('${s.id}')">${escHtml(s.title)}</a>`)
+                    .join('');
+            }
+
+            // Load manifest and bg
             let manifest = [];
             try {
                 const res = await fetch('/manifest.json');
@@ -320,6 +344,10 @@
                 };
                 img.src = smartUrl;
             }
+        }
+
+        function escHtml(s) {
+            return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
         }
 
         function cloudinarySmartCrop(url) {
@@ -356,10 +384,9 @@
         window.addEventListener('scroll', updateScrollHint, { passive: true });
 
         // Panel
-        const panelCache = {};
         let activeKey = null;
 
-        async function showPanel(key) {
+        function showPanel(key) {
             const panel   = document.getElementById('content-panel');
             const content = document.getElementById('panel-content');
 
@@ -373,28 +400,17 @@
 
             // set active nav state
             document.querySelectorAll('#footer a').forEach(a => a.classList.remove('active'));
-            document.querySelector(`#footer a[data-key="${key}"]`).classList.add('active');
+            const link = document.querySelector(`#footer a[data-key="${key}"]`);
+            if (link) link.classList.add('active');
             activeKey = key;
 
-            // show panel and scroll to footer
+            // get content from sections data (already loaded)
+            const section = (window._sections || []).find(s => s.id === key);
+            content.innerHTML = section ? (section.content || '') : '';
+
+            // show panel and scroll footer to top of viewport
             panel.style.display = 'block';
-            document.getElementById('footer').scrollIntoView({ behavior: 'smooth' });
-
-            // load content (cached)
-            const fileMap = { impressum: '/impressum.html', contact: '/contact.html', read: '/content.html' };
-
-            if (panelCache[key] !== undefined) {
-                content.innerHTML = panelCache[key];
-                return;
-            }
-
-            content.innerHTML = '';
-            try {
-                const res = await fetch(fileMap[key]);
-                const html = res.ok ? await res.text() : '';
-                panelCache[key] = html;
-                content.innerHTML = html;
-            } catch(e) { panelCache[key] = ''; }
+            window.scrollTo({ top: document.getElementById('footer').offsetTop, behavior: 'smooth' });
         }
 
         init();
