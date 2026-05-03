@@ -306,18 +306,28 @@
             let sections = [];
             try {
                 const res = await fetch('/sections.json');
-                if (res.ok) sections = await res.json();
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data) && data.length) sections = data;
+                }
             } catch(e) {}
+
+            // Fallback: default stubs so footer links always work
+            if (!sections.length) {
+                sections = [
+                    { id: 'impressum', title: 'Impressum', enabled: true },
+                    { id: 'contact',   title: 'Contact',   enabled: true },
+                    { id: 'read',      title: 'Read',       enabled: true },
+                ];
+            }
 
             window._sections = sections;
 
             const footer = document.getElementById('footer');
             const enabled = sections.filter(s => s.enabled !== false);
-            if (enabled.length) {
-                footer.innerHTML = enabled
-                    .map(s => `<a data-key="${s.id}" onclick="showPanel('${s.id}')">${escHtml(s.title)}</a>`)
-                    .join('');
-            }
+            footer.innerHTML = enabled
+                .map(s => `<a data-key="${s.id}" onclick="showPanel('${s.id}')">${escHtml(s.title)}</a>`)
+                .join('');
 
             // Load manifest and bg
             let manifest = [];
@@ -386,7 +396,7 @@
         // Panel
         let activeKey = null;
 
-        function showPanel(key) {
+        async function showPanel(key) {
             const panel   = document.getElementById('content-panel');
             const content = document.getElementById('panel-content');
 
@@ -404,13 +414,29 @@
             if (link) link.classList.add('active');
             activeKey = key;
 
-            // get content from sections data (already loaded)
-            const section = (window._sections || []).find(s => s.id === key);
-            content.innerHTML = section ? (section.content || '') : '';
-
-            // show panel and scroll footer to top of viewport
+            // show panel and scroll so footer sits ~50px from top
             panel.style.display = 'block';
-            window.scrollTo({ top: document.getElementById('footer').offsetTop, behavior: 'smooth' });
+            window.scrollTo({
+                top: Math.max(0, document.getElementById('footer').offsetTop - 50),
+                behavior: 'smooth',
+            });
+
+            // get content from sections data
+            const section = (window._sections || []).find(s => s.id === key);
+            if (section && section.content != null) {
+                content.innerHTML = section.content || '';
+            } else {
+                // fallback: fetch from legacy individual files
+                const fileMap = { impressum: '/impressum.html', contact: '/contact.html', read: '/content.html' };
+                content.innerHTML = '';
+                const url = fileMap[key];
+                if (url) {
+                    try {
+                        const r = await fetch(url);
+                        content.innerHTML = r.ok ? await r.text() : '';
+                    } catch(e) {}
+                }
+            }
         }
 
         init();
