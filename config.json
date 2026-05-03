@@ -1,10 +1,10 @@
 {
-  "strength": 15,
-  "softness": 3.1,
-  "extraBlur": 1.5,
-  "tinting": 0,
+  "strength": 33,
+  "softness": 6.6,
+  "extraBlur": 2,
+  "tinting": 0.1,
   "contrast": 194,
-  "brightness": 87,
+  "brightness": 124,
   "invert": 0,
-  "edgeSpecularity": 0.12
+  "edgeSpecularity": 0.06
 }
